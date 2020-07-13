@@ -1,0 +1,97 @@
+import re
+import math as mt
+
+def vocabulary(train):
+    corpus=[]; longString = ''
+    for words, cla in train:
+        word_list = [word.lower() for word in re.findall(r'[A-Za-záéíóúñ]+', words) if len(word)>3]
+        corpus.append((' '.join(word_list), cla))
+    train=corpus
+    
+    for text in train:
+        longString += text[0].lower() + ' '
+    #print(longString)
+    vocab = set(re.findall(r'[a-záéíóúñ]+', longString)) #Mi vocabulario
+    return vocab, train
+
+def textConc(train):#concatenate text Of all docs by class
+    textMan, textWoman = '',''
+    for sentence, cla in train:
+        if cla == "man":
+            textMan = textMan+sentence+' '     
+        if cla == "woman":
+            textWoman = textWoman+sentence+' '  
+    return textMan, textWoman
+
+def wordsDoc(train, vocab, textMan, textWoman):
+        manWords = {}
+        womanWords = {}
+        compT_man, compT_woman=0,0
+        for t in vocab:
+            if t in textMan:
+                manWords[t]=textMan.count(t)
+            if t in textWoman:
+                womanWords[t]=textWoman.count(t)
+        
+        for t in vocab:
+            if t not in textMan:
+                #print(t,womanWords[t])
+                compT_man+=womanWords[t]+1
+            if t not in textWoman:
+                compT_woman+=manWords[t]+1
+            
+        condprobMan, condprobWoman = {},{}
+        for t in vocab:
+            if t in textMan:
+                condprobMan[t]=(manWords[t]+1)/compT_man
+            if t in textWoman:
+                condprobWoman[t]=(womanWords[t]+1)/compT_woman
+
+        #print(manWords, womanWords)
+        #print(condprobMan, condprobWoman)
+        #print(compT_man,compT_woman)
+        return condprobMan, condprobWoman
+
+def classProb(train):#Contamos el numero de documento por clase
+        numMan = [train[1] for train in train].count("man")
+        #print(numMan)
+        numWoman = [train[1] for train in train].count("woman")
+        #print(numWoman)
+        return numMan, numWoman
+
+def main():
+    file_1='manV2.txt'
+    file_2='womanV2.txt'
+    
+    with open(file_1,'r',encoding='utf-8') as m, open(file_2,'r',encoding='utf-8') as w:
+        texto_m=[line.strip() for line in m]
+        texto_w=[line.strip() for line in w]
+    
+    train=[(i,'man') for i in texto_m]+[(j,'woman') for j in texto_w]
+        
+    #test=[('Religiosidad instantánea: Ante la muerte de Dios, la gente busca sus preceptos morales en los memes y estados de su influencer favorito.','man'),]
+    
+    test=[('Tenía todo lo que me enseñaron que sería la felicidad, buenas calificaciones, amigos, amor, estabilidad mediocre. Te entregué mi amor y en la confianza de hacerlo te di mi cuerpo. Te mostré quién era en la oscuridad, en la luz y entre sombras. Te di lo mejor de mí y murmurabas hacer lo mismo.','woman'),]
+    
+    manClasses, womanClasses = classProb(train)
+    totalSentences = manClasses + womanClasses #CountDocs
+    probabilityMan = manClasses / float(totalSentences) #prior por clase
+    probabilitywoman = womanClasses / float(totalSentences)
+    vocab, train = vocabulary(train) #vocabulario de todos los documentos
+    textMan, textWoman = textConc(train) #Doc por genero concat
+    condprobMan, condprobWoman = wordsDoc(train, vocab, textMan, textWoman)
+    w, w_Test=vocabulary(test)
+    score = {}
+    score['man'] = probabilityMan
+    score['woman'] = probabilitywoman
+    for t in w:
+        if t in condprobMan:
+            score['man'] += condprobMan[t]
+            #print(condprobMan)
+        if t in condprobWoman:
+            score['woman'] += condprobWoman[t]
+            #print(condprobWoman)
+    return "MAN" if score["man"] > score["woman"] else "WOMAN"
+
+r = main()
+print(r)
